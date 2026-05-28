@@ -9,6 +9,7 @@ import tempfile
 import typing
 from pathlib import Path
 
+from pycargoebuild import __version__
 from pycargoebuild.cargo import Crate, FileCrate
 
 
@@ -47,7 +48,10 @@ def fetch_crates_using_aria2(crates: typing.Iterable[Crate], *, distdir: Path
         file_list_f.flush()
 
         subprocess.check_call(
-            ["aria2c", "-d", str(distdir), "-i", file_list_f.name],
+            ["aria2c",
+                "-U", f"pycargoebuild/{__version__} (https://github.com/gentoo/pycargoebuild)",
+                "-d", str(distdir),
+                "-i", file_list_f.name],
             stdout=sys.stderr)
 
 
@@ -60,7 +64,9 @@ def fetch_files_using_wget(files: typing.Iterable[typing.Tuple[str, Path]]
     for url, path in files:
         if not path.exists():
             subprocess.check_call(
-                ["wget", "-O", str(path), url],
+                ["wget",
+                    "-U", f"pycargoebuild/{__version__} (https://github.com/gentoo/pycargoebuild)",
+                    "-O", str(path), url],
                 stdout=sys.stderr)
 
 
