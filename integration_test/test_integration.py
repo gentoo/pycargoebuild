@@ -131,7 +131,7 @@ PACKAGES = {
         uses_license_file=True,
         uses_plus_fallback=True),
     "rustls-0.20.7.ebuild": Package(
-        url="https://crates.io/api/v1/crates/rustls/0.20.7/download",
+        url="https://static.crates.io/crates/rustls/0.20.7/download",
         checksum="539a2bfe908f471bfa933876bd1eb6a1"
                  "9cf2176d375f82ef7f99530a40e48c2c",
         directories=["rustls-0.20.7"],

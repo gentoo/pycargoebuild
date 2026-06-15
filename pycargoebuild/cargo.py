@@ -49,7 +49,7 @@ class FileCrate(Crate):
 
     @property
     def download_url(self) -> str:
-        return (f"https://crates.io/api/v1/crates/{self.name}/{self.version}/"
+        return (f"https://static.crates.io/crates/{self.name}/{self.version}/"
                 "download")
 
     @property
