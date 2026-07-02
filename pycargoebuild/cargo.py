@@ -61,6 +61,7 @@ class GitHost(enum.Enum):
     GITHUB = enum.auto()
     GITLAB = enum.auto()
     GITLAB_SELFHOSTED = enum.auto()
+    GITEA = enum.auto()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -79,6 +80,8 @@ class GitCrate(Crate):
             return GitHost.GITLAB
         if self.repository.startswith("https://gitlab."):
             return GitHost.GITLAB_SELFHOSTED
+        if self.repository.startswith("https://codeberg.org/"):
+            return GitHost.GITEA
         raise RuntimeError("Unsupported git crate source: "
                            f"{self.repository}")
 
@@ -96,13 +99,15 @@ class GitCrate(Crate):
                 return ".gl"
             case GitHost.GITLAB_SELFHOSTED:
                 return ""
+            case GitHost.GITEA:
+                return ".gt"
             case _ as host:
                 typing.assert_never(host)
 
     @property
     def download_url(self) -> str:
         match self.repo_host:
-            case GitHost.GITHUB:
+            case GitHost.GITHUB | GitHost.GITEA:
                 return f"{self.repository}/archive/{self.commit}.tar.gz"
             case GitHost.GITLAB | GitHost.GITLAB_SELFHOSTED:
                 return (f"{self.repository}/-/archive/{self.commit}/"
@@ -165,6 +170,8 @@ class GitCrate(Crate):
         match self.repo_host:
             case GitHost.GITHUB | GitHost.GITLAB:
                 return f"{self.repository};{self.commit};{subdir}"
+            case GitHost.GITEA:
+                return f"{self.repository};{self.commit};{subdir};gitea"
             case GitHost.GITLAB_SELFHOSTED:
                 crate_uri = self.download_url.replace(self.commit, "%commit%")
                 return f"{crate_uri};{self.commit};{subdir}"

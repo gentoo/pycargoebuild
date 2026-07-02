@@ -69,6 +69,12 @@ CARGO_LOCK_TOML = b'''
     version = "0.8.0"
     source = """git+https://gitlab.freedesktop.org/pipewire/pipewire-rs\\
                 ?tag=v0.8.0#449bf53f5d5edc8d0be6c0c80bc19d882f712dd7"""
+
+    [[package]]
+    name = "fluent-ftl-tools"
+    version = "0.1.0"
+    source = """git+https://codeberg.org/danielrainer/fluent-ftl-tools\\
+                #1234567890abcdef1234567890abcdef12345678"""
 '''
 
 PREHISTORIC_CARGO_LOCK_TOML = b"""
@@ -126,6 +132,9 @@ CRATES = [
     GitCrate("pipewire", "0.8.0",
              "https://gitlab.freedesktop.org/pipewire/pipewire-rs",
              "449bf53f5d5edc8d0be6c0c80bc19d882f712dd7"),
+    GitCrate("fluent-ftl-tools", "0.1.0",
+             "https://codeberg.org/danielrainer/fluent-ftl-tools",
+             "1234567890abcdef1234567890abcdef12345678"),
 ]
 
 
@@ -266,6 +275,35 @@ license = "MIT"
 
 
 @pytest.mark.parametrize(
+    "repository,commit,download_url,filename",
+    [("https://github.com/01mf02/regex", "90eebbdb",
+      "https://github.com/01mf02/regex/archive/90eebbdb.tar.gz",
+      "regex-90eebbdb.gh.tar.gz"),
+     ("https://gitlab.com/virtio-fs/virtiofsd", "af439fbf",
+      ("https://gitlab.com/virtio-fs/virtiofsd/-/archive/af439fbf/"
+       "virtiofsd-af439fbf.tar.gz"),
+      "virtiofsd-af439fbf.gl.tar.gz"),
+     ("https://gitlab.freedesktop.org/pipewire/pipewire-rs", "449bf53f",
+      ("https://gitlab.freedesktop.org/pipewire/pipewire-rs/-/archive/449bf53f/"
+       "pipewire-rs-449bf53f.tar.gz"),
+      "pipewire-rs-449bf53f.tar.gz"),
+     ("https://codeberg.org/danielrainer/fluent-ftl-tools", "12345678",
+      ("https://codeberg.org/danielrainer/fluent-ftl-tools/archive/"
+       "12345678.tar.gz"),
+      "fluent-ftl-tools-12345678.gt.tar.gz"),
+     ])
+def test_git_crate_urls(repository, commit, download_url, filename):
+    crate = GitCrate("test", "0.1", repository, commit)
+    assert crate.download_url == download_url
+    assert crate.filename == filename
+
+
+def test_git_crate_unsupported_host():
+    with pytest.raises(RuntimeError):
+        GitCrate("test", "0.1", "https://example.com/foo/bar", "0123abcd")
+
+
+@pytest.mark.parametrize(
     "name,expected",
     [("toplevel", ""),
      ("subpkg", "sub"),
@@ -274,7 +312,7 @@ license = "MIT"
 def test_git_crate_package_directory(tmp_path, name, expected):
     commit = "5ace474ad2e92da836de60afd9014cbae7bdd481"
     crate = GitCrate(name, "0.1",
-                     "https://github.com/projg2/pycargoebuild",
+                     "https://github.com/gentoo/pycargoebuild",
                      commit)
     basename = f"pycargoebuild-{commit}"
 
@@ -298,7 +336,7 @@ def test_git_crate_package_directory(tmp_path, name, expected):
 def test_git_crate_root_directory(tmp_path, have_lock):
     commit = "5ace474ad2e92da836de60afd9014cbae7bdd481"
     crate = GitCrate("pycargoebuild", "0.1",
-                     "https://github.com/projg2/pycargoebuild",
+                     "https://github.com/gentoo/pycargoebuild",
                      commit)
     basename = f"pycargoebuild-{commit}"
 
@@ -314,3 +352,29 @@ def test_git_crate_root_directory(tmp_path, have_lock):
             tarf.addfile(tar_info, io.BytesIO(b""))
 
     assert crate.get_root_directory(tmp_path) == PurePath(basename)
+
+
+@pytest.mark.parametrize(
+    "repository,expected",
+    [("https://github.com/gentoo/pycargoebuild",
+      "https://github.com/gentoo/pycargoebuild;{commit};{basename}/sub"),
+     ("https://codeberg.org/gentoo/pycargoebuild",
+      ("https://codeberg.org/gentoo/pycargoebuild;{commit};{basename}/sub;"
+       "gitea")),
+     ])
+def test_git_crate_entry(tmp_path, repository, expected):
+    commit = "5ace474ad2e92da836de60afd9014cbae7bdd481"
+    crate = GitCrate("subpkg", "0.1", repository, commit)
+    basename = f"pycargoebuild-{commit}"
+
+    with tarfile.open(tmp_path / crate.filename, "x:gz") as tarf:
+        tar_info = tarfile.TarInfo(f"{basename}/Cargo.toml")
+        tar_info.size = len(TOP_CARGO_TOML)
+        tarf.addfile(tar_info, io.BytesIO(TOP_CARGO_TOML))
+        tar_info = tarfile.TarInfo(f"{basename}/sub/Cargo.toml")
+        tar_info.size = len(SUB_CARGO_TOML)
+        tarf.addfile(tar_info, io.BytesIO(SUB_CARGO_TOML))
+
+    assert (crate.get_git_crate_entry(tmp_path) ==
+            expected.format(commit=commit,
+                            basename="pycargoebuild-%commit%"))

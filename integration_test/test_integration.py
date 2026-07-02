@@ -175,6 +175,13 @@ PACKAGES = {
         has_crates_without_license=True,
         uses_license_file=True,
         use_features=True),
+    "fish-shell-4.8.0.ebuild": Package(
+        url="https://github.com/fish-shell/fish-shell/archive/"
+            "refs/tags/4.8.0.tar.gz",
+        checksum="c27e91e3812608d70654cd0640670438"
+                 "60f39d9e3fa1171e3af326c852f3e209",
+        directories=["fish-shell-4.8.0/crates/fluent-extraction"],
+        expected_filename="fish-fluent-extraction-0.0.0.ebuild"),
 }
 
 
