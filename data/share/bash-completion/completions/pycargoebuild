@@ -1,5 +1,6 @@
 # pycargoebuild
 # (c) 2024 Arthur Zamarin <arthurzam@gentoo.org>
+# (c) 2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 _pycargoebuild() {
@@ -11,6 +12,7 @@ _pycargoebuild() {
         --crate-tarball-prefix --no-write-crate-tarball -d --distdir
         -f --force -F --fetcher -i --input --inplace --no-config
         -l --license-mapping -L --no-license -M --no-manifest -o --output
+        -w --write-crate-tarball -u --use-crate-tarball -C --fill-crates
     )
 
     case ${prev} in

@@ -225,7 +225,7 @@ def test_integration(tmp_path, capfd, caplog, ebuild):
     args = ["-d", str(dist_dir),
             "-l", str(test_dir / "license-mapping.conf"),
             "-o", str(tmp_path / "{name}-{version}.ebuild"),
-            "--no-config"]
+            "--no-config", "--fill-crates"]
     if not pkg_info.crate_license:
         args.append("-L")
     if pkg_info.use_features:

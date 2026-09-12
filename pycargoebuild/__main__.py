@@ -1,9 +1,10 @@
 # pycargoebuild
-# (c) 2022-2025 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import argparse
 import datetime
+import enum
 import io
 import json
 import logging
@@ -50,69 +51,120 @@ class WorkspaceData(typing.NamedTuple):
     workspace_metadata: dict
 
 
+class Mode(enum.Enum):
+    WRITE_CRATE_TARBALL = enum.auto()
+    USE_CRATE_TARBALL = enum.auto()
+    FILL_CRATES = enum.auto()
+
+
 def main(prog_name: str, *argv: str) -> int:
     argp = argparse.ArgumentParser(prog=os.path.basename(prog_name))
-    argp.add_argument("-c", "--crate-tarball",
-                      action="store_true",
-                      help="Pack fetched crates into a tarball rather than "
-                           "adding them to the CRATES variable")
-    argp.add_argument("-e", "--features",
-                      action="store_true",
-                      help="Add USE flags for Cargo features")
-    argp.add_argument("--crate-tarball-path",
-                      default="{distdir}/{name}-{version}-crates.tar.xz",
-                      help="Path to write crate tarball to (default: "
-                           "{distdir}/{name}-{version}-crates.tar.xz)")
-    argp.add_argument("--crate-tarball-prefix",
-                      default="cargo_home/gentoo",
-                      help="Prefix prepended for all paths in the crate "
-                           "tarball (default: cargo_home/gentoo)")
-    argp.add_argument("--no-write-crate-tarball",
-                      action="store_true",
-                      help="Do not create the crate tarball, just write "
-                           "the ebuild assuming it exists")
-    argp.add_argument("-d", "--distdir",
-                      type=Path,
-                      help="Directory to store downloaded crates in "
-                           "(default: get from Portage)")
-    argp.add_argument("-f", "--force",
-                      action="store_true",
-                      help="Force overwriting the output file")
-    argp.add_argument("-F", "--fetcher",
-                      choices=("auto",) + FETCHERS,
-                      default="auto",
-                      help="Fetcher to use (one of: auto [default], "
-                           f"{', '.join(FETCHERS)})")
-    argp.add_argument("-i", "--input", "--inplace",
-                      type=argparse.FileType("r", encoding="utf-8"),
-                      metavar="INPUT",
-                      help="Update the CRATES and LICENSE variables "
-                           "in the specified ebuild instead of creating "
-                           "one from scratch")
-    argp.add_argument("-l", "--license-mapping",
-                      type=argparse.FileType("r", encoding="utf-8"),
-                      help="Path to license-mapping.conf file (default: "
-                           "get from Portage)")
-    argp.add_argument("-L", "--no-license",
-                      action="store_true",
-                      help="Do not include LICENSEs (e.g. when crates are "
-                           "only used at build time")
-    argp.add_argument("-M", "--no-manifest",
-                      action="store_true",
-                      help="Do not call `pkgdev manifest` (called only if "
-                           "Manifest exists)")
-    argp.add_argument("-o", "--output",
-                      help="Ebuild file to write (default: INPUT if --input "
-                           "is specified, {name}-{version}.ebuild otherwise)")
-    argp.add_argument("--no-config",
+
+    # mode
+    mode_g_outer = argp.add_argument_group("mode")
+    mode_g = mode_g_outer.add_mutually_exclusive_group()
+    mode_g.add_argument("-w", "--write-crate-tarball",
+                        dest="mode",
+                        action="store_const",
+                        const=Mode.WRITE_CRATE_TARBALL,
+                        help="Pack fetched crates into a tarball and do not "
+                             "fill CRATES variable")
+    mode_g.add_argument("-u", "--use-crate-tarball",
+                        dest="mode",
+                        action="store_const",
+                        const=Mode.USE_CRATE_TARBALL,
+                        help="Assume crate tarball exists and do not fill "
+                             "CRATES variable")
+    mode_g.add_argument("-C", "--fill-crates",
+                        dest="mode",
+                        action="store_const",
+                        const=Mode.FILL_CRATES,
+                        help="Fill the CRATES variable directly")
+
+    # option flags
+    opt_g = argp.add_argument_group("common flags")
+    opt_g.add_argument("-e", "--features",
+                       action="store_true",
+                       help="Add USE flags for Cargo features")
+    opt_g.add_argument("-f", "--force",
+                       action="store_true",
+                       help="Force overwriting the output file")
+    opt_g.add_argument("-i", "--input", "--inplace",
+                       type=argparse.FileType("r", encoding="utf-8"),
+                       metavar="INPUT",
+                       help="Update the CRATES and LICENSE variables "
+                            "in the specified ebuild instead of creating "
+                            "one from scratch")
+    opt_g.add_argument("-L", "--no-license",
+                       action="store_true",
+                       help="Do not include LICENSEs (e.g. when crates are "
+                            "only used at build time)")
+    opt_g.add_argument("-M", "--no-manifest",
+                       action="store_true",
+                       help="Do not call `pkgdev manifest` (called only if "
+                            "Manifest exists)")
+    opt_g.add_argument("-o", "--output",
+                       help="Ebuild file to write (default: INPUT if --input "
+                            "is specified, {name}-{version}.ebuild otherwise)")
+
+    cfg_g = argp.add_argument_group("configuration flags")
+    cfg_g.add_argument("-d", "--distdir",
+                       type=Path,
+                       help="Directory to store downloaded crates in "
+                            "(default: get from Portage)")
+    cfg_g.add_argument("-F", "--fetcher",
+                       choices=("auto",) + FETCHERS,
+                       default="auto",
+                       help="Fetcher to use")
+    cfg_g.add_argument("-l", "--license-mapping",
+                       type=argparse.FileType("r", encoding="utf-8"),
+                       help="Path to license-mapping.conf file (default: "
+                            "get from Portage)")
+    cfg_g.add_argument("--no-config",
                       action="store_true",
                       help="Inhibit loading configuration files")
+
+    ct_opt_g = argp.add_argument_group("crate tarball options")
+    ct_opt_g.add_argument("-c", "--crate-tarball",
+                          action="store_true",
+                          help="Pack fetched crates into a tarball rather "
+                               "than adding them to the CRATES variable "
+                               "(deprecated, use --write-crate-tarball or "
+                               "--use-crate-tarball)")
+    ct_opt_g.add_argument("--crate-tarball-path",
+                          default="{distdir}/{name}-{version}-crates.tar.xz",
+                          help="Path to write crate tarball to (default: "
+                               "{distdir}/{name}-{version}-crates.tar.xz)")
+    ct_opt_g.add_argument("--crate-tarball-prefix",
+                          default="cargo_home/gentoo",
+                          help="Prefix prepended for all paths in the crate "
+                               "tarball (default: cargo_home/gentoo)")
+    ct_opt_g.add_argument("--no-write-crate-tarball",
+                          action="store_true",
+                          help="Do not create the crate tarball, just write "
+                               "the ebuild assuming it exists (deprecated, "
+                               "use --use-crate-tarball instead)")
     argp.add_argument("directory",
                       type=Path,
                       default=[Path(".")],
                       nargs="*",
                       help="Directory containing Cargo.* files (default: .)")
     args = argp.parse_args(argv)
+
+    if args.mode is None:
+        if not args.crate_tarball:
+            args.mode = Mode.FILL_CRATES
+            repl = "-C or --fill-crates"
+        elif args.no_write_crate_tarball:
+            args.mode = Mode.USE_CRATE_TARBALL
+            repl = "-u or --use-crate-tarball"
+        else:
+            args.mode = Mode.WRITE_CRATE_TARBALL
+            repl = "-w or --write-crate-tarball"
+        logging.warning(
+            "The mode argument will be required in the future. Please pass "
+            f"{repl} for the mode implied by current flags."
+        )
 
     config_toml = {}
     if not args.no_config:
@@ -325,14 +377,15 @@ def main(prog_name: str, *argv: str) -> int:
     umask = os.umask(0)
     os.umask(umask)
 
-    if args.crate_tarball:
+    if args.mode != Mode.FILL_CRATES:
         crate_tarball = Path(
             args.crate_tarball_path.format(name=pkg_meta.name,
                                            version=pkg_meta.version,
                                            distdir=args.distdir))
-        if args.no_write_crate_tarball:
+        if args.mode == Mode.USE_CRATE_TARBALL:
             logging.info("Skipping creating crate tarball")
         else:
+            assert args.mode == Mode.WRITE_CRATE_TARBALL
             if not args.force and crate_tarball.exists():
                 logging.error(f"{crate_tarball} exists already, pass -f to "
                               "overwrite it")
@@ -370,7 +423,8 @@ def main(prog_name: str, *argv: str) -> int:
                 crates,
                 distdir=args.distdir,
                 crate_license=not args.no_license,
-                crate_tarball=crate_tarball if args.crate_tarball else None,
+                crate_tarball=(crate_tarball if args.mode != Mode.FILL_CRATES
+                               else None),
                 license_overrides=config_toml.get("license-overrides", {}),
                 )
             logging.warning(
@@ -382,7 +436,8 @@ def main(prog_name: str, *argv: str) -> int:
                 crates,
                 distdir=args.distdir,
                 crate_license=not args.no_license,
-                crate_tarball=crate_tarball if args.crate_tarball else None,
+                crate_tarball=(crate_tarball if args.mode != Mode.FILL_CRATES
+                               else None),
                 license_overrides=config_toml.get("license-overrides", {}),
                 use_features=args.features,
                 )
