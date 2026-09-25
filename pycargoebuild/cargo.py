@@ -133,10 +133,7 @@ class GitCrate(Crate):
                 raise RuntimeError(
                     f"{root_dir}/Cargo.toml not found in {filename}")
             with tarf:
-                # tarfile.ExFileObject() is IO[bytes] while tomli/tomllib
-                # expects BinaryIO -- but it actually is compatible
-                # https://github.com/hukkin/tomli/issues/214
-                return (tomllib.load(tarf).get("workspace", {})  # type: ignore
+                return (tomllib.load(tarf).get("workspace", {})
                                           .get("package", {}))
 
     @functools.cache
@@ -151,9 +148,6 @@ class GitCrate(Crate):
                     if f is None:
                         continue
 
-                    # tarfile.ExFileObject() is IO[bytes] while tomli/tomllib
-                    # expects BinaryIO -- but it actually is compatible
-                    # https://github.com/hukkin/tomli/issues/214
                     try:
                         metadata = get_package_metadata(
                             f, workspace_toml)  # type: ignore
@@ -192,7 +186,7 @@ class GitCrate(Crate):
                     tarf = crate_tar.extractfile(tar_info)
                     assert tarf is not None
                     with tarf:
-                        if "workspace" in tomllib.load(tarf):  # type: ignore
+                        if "workspace" in tomllib.load(tarf):
                             return path.parent
         return None
 
