@@ -15,7 +15,7 @@ requires-python = ">=3.10"
 dependencies = [
     "jinja2",
     "license_expression",
-    "tomli >= 1.2.3; python_version < '3.11'",
+    "tomli >= 2.4.0; python_version < '3.15'",
 ]
 
 [project.optional-dependencies]

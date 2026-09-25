@@ -256,6 +256,26 @@ def test_get_package_metadata_default_version():
                             version="0.0.0"))
 
 
+def test_get_package_metadata_toml_1_1():
+    input_toml = b"""
+        [package]
+        name = "test"
+        version = "0"
+        license = "MIT"
+
+        [dependencies]
+        foo = {
+            version = "2",
+            features = ["a", "b"],
+        }
+    """
+
+    assert (get_package_metadata(io.BytesIO(input_toml)) ==
+            PackageMetadata(name="test",
+                            version="0",
+                            license="MIT"))
+
+
 TOP_CARGO_TOML = b"""\
 [package]
 name = "toplevel"
