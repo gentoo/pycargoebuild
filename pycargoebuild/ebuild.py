@@ -1,6 +1,8 @@
 # pycargoebuild
-# (c) 2022-2025 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
+
+from __future__ import annotations
 
 import datetime
 import logging
@@ -10,7 +12,6 @@ import tarfile
 import typing
 import urllib.parse
 from functools import partial
-from pathlib import Path
 
 import jinja2
 import license_expression
@@ -25,6 +26,9 @@ from pycargoebuild.cargo import (
 )
 from pycargoebuild.format import format_license_var
 from pycargoebuild.license import UnmatchedLicense, spdx_to_ebuild
+
+if typing.TYPE_CHECKING:
+    from pathlib import Path
 
 EBUILD_TEMPLATE = """\
 # Copyright {{year}} Gentoo Authors
@@ -72,7 +76,7 @@ src_configure() {
 """
 
 
-def get_CRATES(crates: typing.Iterable[Crate],
+def get_CRATES(crates: set[Crate],
                ) -> str:
     """
     Return the value of CRATES for the given crate list
@@ -231,7 +235,7 @@ def url_dquote_escape(value: str) -> str:
 
 
 def get_ebuild(pkg_meta: PackageMetadata,
-               crates: typing.Iterable[Crate],
+               crates: set[Crate],
                distdir: Path,
                *,
                crate_license: bool = True,
@@ -251,7 +255,7 @@ def get_ebuild(pkg_meta: PackageMetadata,
     compiled_template = jinja_env.from_string(template)
 
     return compiled_template.render(
-        crates=get_CRATES(crates if crate_tarball is None else ()),
+        crates=get_CRATES(crates if crate_tarball is None else set()),
         crate_licenses=(get_crate_LICENSE(crates, distdir, license_overrides)
                         if crate_license else None),
         description=bash_dquote_escape(collapse_whitespace(
@@ -313,7 +317,7 @@ class GitCratesSubst(CountingSubst):
 
 def update_ebuild(ebuild: str,
                   pkg_meta: PackageMetadata,
-                  crates: typing.Iterable[Crate],
+                  crates: set[Crate],
                   distdir: Path,
                   *,
                   crate_license: bool = True,
@@ -327,7 +331,7 @@ def update_ebuild(ebuild: str,
     if license_overrides is None:
         license_overrides = {}
     crates_repl = CountingSubst(
-        partial(get_CRATES, crates if crate_tarball is None else ()))
+        partial(get_CRATES, crates if crate_tarball is None else set()))
     git_crates_repl = GitCratesSubst(partial(get_GIT_CRATES, crates, distdir))
     crate_license_repl = (
         CountingSubst(partial(get_crate_LICENSE, crates, distdir,

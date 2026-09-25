@@ -1,6 +1,8 @@
 # pycargoebuild
-# (c) 2022-2024 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
+
+from __future__ import annotations
 
 import dataclasses
 import enum
@@ -205,7 +207,7 @@ class PackageMetadata(typing.NamedTuple):
     homepage: str | None = None
 
     def with_replaced_license(self, new_license: str | None
-                              ) -> "PackageMetadata":
+                              ) -> PackageMetadata:
         return PackageMetadata(name=self.name,
                                version=self.version,
                                features=self.features,

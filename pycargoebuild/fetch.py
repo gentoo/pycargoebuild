@@ -1,16 +1,20 @@
 # pycargoebuild
-# (c) 2022-2024 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
+
+from __future__ import annotations
 
 import hashlib
 import subprocess
 import sys
 import tempfile
 import typing
-from pathlib import Path
 
 from pycargoebuild import __version__
 from pycargoebuild.cargo import Crate, FileCrate
+
+if typing.TYPE_CHECKING:
+    from pathlib import Path
 
 
 class ChecksumMismatchError(RuntimeError):

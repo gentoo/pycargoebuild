@@ -275,7 +275,7 @@ def test_get_ebuild_no_license(real_license_mapping, crate_dir, crates):
 
 
 def test_get_ebuild_no_crates(real_license_mapping, pkg_meta):
-    assert get_ebuild(pkg_meta, [], Path(".")) == textwrap.dedent(f"""\
+    assert get_ebuild(pkg_meta, set(), Path(".")) == textwrap.dedent(f"""\
         # Copyright {datetime.date.today().year} Gentoo Authors
         # Distributed under the terms of the GNU General Public License v2
 

@@ -1,6 +1,8 @@
 # pycargoebuild
-# (c) 2022-2024 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
+
+from __future__ import annotations
 
 import configparser
 import logging
@@ -23,7 +25,7 @@ class UnmatchedLicense(RuntimeError):
         self.crate = crate
 
 
-def load_license_mapping(f: typing.IO["str"]) -> None:
+def load_license_mapping(f: typing.IO[str]) -> None:
     """Read license mapping from the specified file"""
     conf = configparser.ConfigParser(comment_prefixes=("#",),
                                      delimiters=("=",),
@@ -33,7 +35,9 @@ def load_license_mapping(f: typing.IO["str"]) -> None:
     MAPPING.update((k.lower(), v) for k, v in conf.items("spdx-to-ebuild"))
 
 
-def symbol_to_ebuild(license_symbol: license_expression.LicenseSymbol) -> str:
+def symbol_to_ebuild(license_symbol: license_expression.LicenseSymbol |
+                                     license_expression.LicenseWithExceptionSymbol
+                     ) -> str:
     full_key = str(license_symbol).lower()
     full_match = MAPPING.get(full_key)
     no_plus = MAPPING.get(full_key.replace("+", ""))
@@ -64,7 +68,7 @@ def spdx_to_ebuild(spdx: license_expression.Renderable) -> str:
     """
     Convert SPDX license expression to ebuild license string.
     """
-    def sub(x: license_expression.LicenseExpression, in_or: bool
+    def sub(x: license_expression.Renderable, in_or: bool
             ) -> typing.Generator[str, None, None]:
         if isinstance(x, license_expression.AND):
             if in_or:

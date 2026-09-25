@@ -1,6 +1,8 @@
 # pycargoebuild
-# (c) 2022-2024 Michał Górny <mgorny@gentoo.org>
+# (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
+
+from __future__ import annotations
 
 import typing
 from textwrap import TextWrapper
@@ -8,7 +10,7 @@ from textwrap import TextWrapper
 
 class CompoundGroup(typing.NamedTuple):
     prefix: list[str]
-    values: list[typing.Union[str, "CompoundGroup"]]
+    values: list[str | CompoundGroup]
     suffix: list[str]
 
 

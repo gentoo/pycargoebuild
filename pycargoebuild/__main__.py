@@ -2,6 +2,8 @@
 # (c) 2022-2026 Michał Górny <mgorny@gentoo.org>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+from __future__ import annotations
+
 import argparse
 import datetime
 import enum
