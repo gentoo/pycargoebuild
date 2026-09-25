@@ -92,7 +92,7 @@ def main(prog_name: str, *argv: str) -> int:
                        action="store_true",
                        help="Force overwriting the output file")
     opt_g.add_argument("-i", "--input", "--inplace",
-                       type=argparse.FileType("r", encoding="utf-8"),
+                       type=Path,
                        metavar="INPUT",
                        help="Update the CRATES and LICENSE variables "
                             "in the specified ebuild instead of creating "
@@ -347,7 +347,7 @@ def main(prog_name: str, *argv: str) -> int:
 
     if args.input is not None and args.output is None:
         # default to overwriting the input file
-        outfile = Path(args.input.name)
+        outfile = args.input
     else:
         # This warning is only relevant when constructing a new ebuild,
         # as otherwise we do not update other metadata.
@@ -417,7 +417,7 @@ def main(prog_name: str, *argv: str) -> int:
     try:
         if args.input is not None:
             ebuild = update_ebuild(
-                args.input.read(),
+                args.input.read_text(encoding="utf-8"),
                 pkg_meta,
                 crates,
                 distdir=args.distdir,
@@ -466,10 +466,9 @@ def main(prog_name: str, *argv: str) -> int:
                                      delete=False) as outf:
         try:
             if args.input is not None:
-                st = os.stat(args.input.fileno())
+                st = args.input.stat()
                 os.chown(outf.fileno(), st.st_uid, st.st_gid)
                 os.chmod(outf.fileno(), stat.S_IMODE(st.st_mode))
-                args.input.close()
             else:
                 os.fchmod(outf.fileno(), 0o666 & ~umask)
             outf.write(ebuild)
