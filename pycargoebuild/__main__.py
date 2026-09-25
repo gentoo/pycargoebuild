@@ -119,7 +119,7 @@ def main(prog_name: str, *argv: str) -> int:
                        default="auto",
                        help="Fetcher to use")
     cfg_g.add_argument("-l", "--license-mapping",
-                       type=argparse.FileType("r", encoding="utf-8"),
+                       type=Path,
                        help="Path to license-mapping.conf file (default: "
                             "get from Portage)")
     cfg_g.add_argument("--no-config",
@@ -193,10 +193,8 @@ def main(prog_name: str, *argv: str) -> int:
         if default_distdir is not None:
             args.distdir = Path(default_distdir)
     if args.license_mapping is None:
-        default_license_mapping = config_toml_paths.get("license-mapping")
-        if default_license_mapping is not None:
-            args.license_mapping = open(default_license_mapping, "r",
-                                        encoding="utf-8")
+        # may still be None
+        args.license_mapping = config_toml_paths.get("license-mapping")
 
     if args.distdir is None or args.license_mapping is None:
         from portage import create_trees
@@ -206,11 +204,10 @@ def main(prog_name: str, *argv: str) -> int:
             args.distdir = Path(tree["porttree"].settings["DISTDIR"])
         if args.license_mapping is None:
             repo = Path(tree["porttree"].dbapi.repositories["gentoo"].location)
-            args.license_mapping = open(repo / "metadata/license-mapping.conf",
-                                        "r", encoding="utf-8")
+            args.license_mapping = repo / "metadata/license-mapping.conf"
 
-    load_license_mapping(args.license_mapping)
-    args.license_mapping.close()
+    with open(args.license_mapping, "r", encoding="utf-8") as f:
+        load_license_mapping(f)
     MAPPING.update(
         (k.lower(), v) for k, v
         in config_toml.get("license-mapping", {}).items())
