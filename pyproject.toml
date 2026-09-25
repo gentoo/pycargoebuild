@@ -54,14 +54,6 @@ module = [
 disallow_untyped_defs = false
 check_untyped_defs = true
 
-[[tool.mypy.overrides]]
-module = [
-    "license_expression.*",
-    "portage.*",
-    "rich.*",
-]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 testpaths = [
     "test",
@@ -115,3 +107,6 @@ ignore = [
 [tool.ruff.lint.flake8-copyright]
 min-file-size = 1
 notice-rgx = "\\(c\\) \\d{4}(-\\d{4})?"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["portage.**"]
