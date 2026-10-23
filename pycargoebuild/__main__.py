@@ -390,7 +390,7 @@ def main(prog_name: str, *argv: str) -> int:
                               "overwrite it")
                 return 1
             with tempfile.NamedTemporaryFile(mode="wb",
-                                             dir=args.distdir,
+                                             dir=crate_tarball.parent,
                                              delete=False
                                              ) as cratef:
                 try:
