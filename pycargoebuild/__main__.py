@@ -394,12 +394,11 @@ def main(prog_name: str, *argv: str) -> int:
                                              delete=False
                                              ) as cratef:
                 try:
-                    # preset: https://github.com/astral-sh/ty/issues/4595
                     with tarfile.open(fileobj=cratef,
                                       mode="w:xz",
                                       format=tarfile.GNU_FORMAT,
                                       encoding="UTF-8",
-                                      preset=9 | lzma.PRESET_EXTREME,  # type: ignore
+                                      preset=9 | lzma.PRESET_EXTREME,
                                       ) as tar_out:
                         os.fchmod(cratef.fileno(), 0o666 & ~umask)
                         logging.info("Repacking crates ...")
